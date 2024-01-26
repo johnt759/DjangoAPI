@@ -1,0 +1,21 @@
+(Make sure to use the default values for each user listed below. Feel free to try out different usernames and passwords if needed.)
+
+Superuser
+Username: admin
+Password: L!tt13L3m0n@d3
+Email: admin@littlelemon.com
+
+Manager
+Username: admin
+Password: L!tt13L3m0n@d3
+Email: @littlelemon.com
+
+Delivery crew
+Username: admin
+Password: L!tt13L3m0n@d3
+Email: @littlelemon.com
+
+Customer
+Username: admin
+Password: L!tt13L3m0n@d3
+Email: @inbox.com
