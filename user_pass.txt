@@ -6,16 +6,22 @@ Password: L!tt13L3m0n@d3
 Email: admin@littlelemon.com
 
 Manager
-Username: admin
-Password: L!tt13L3m0n@d3
-Email: @littlelemon.com
+Username: Robert
+Password: Ch@rm!ngt0n
+Token: fa547c856d4ed0d4a4211625d8ff30f725edb8c4
+
+Username: Kayla
+Password: Or@ng3Ju!c3
 
 Delivery crew
-Username: admin
-Password: L!tt13L3m0n@d3
-Email: @littlelemon.com
+Username: Mary
+Password: Expr3$$0T00
+Token: e76731fd16546c0c4e2c7d0b832d4b131961feb9
+
+Username: Larry
+Password: E@r1yT0n
 
 Customer
-Username: admin
-Password: L!tt13L3m0n@d3
-Email: @inbox.com
+Username: Benjamin
+Password: L!tt13L!m3
+Token: 85cc0fb1ce27199accfa14c03a6e2df624441874

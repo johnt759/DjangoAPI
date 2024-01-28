@@ -32,7 +32,7 @@ def ItemsList(request):
             if new_item.is_valid():
                 new_item.save()
                 return Response({"message": "Item added into menu list"}, 201)
-            else:   
+            else:
                 return Response({"message": "Bad request"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
@@ -46,13 +46,14 @@ def ThisItem(request, id):
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
             this_item = MenuItemSerializer(this_item)
-            return Response({"message": "Displaying this item"}, 200)
+            return Response(this_item.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'PUT':
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
             this_item = MenuItemSerializer(this_item)
+            this_item.save()
             return Response({"message": "Updating this item"}, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
@@ -60,6 +61,7 @@ def ThisItem(request, id):
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
             this_item = MenuItemSerializer(this_item)
+            this_item.save()
             return Response({"message": "Partially updating this item"}, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
@@ -86,13 +88,10 @@ def ViewManagers(request):
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_manager = UserSerializer(data=request.data)
-            if new_manager.is_valid():
-                this_group = Group.objects.filter(name="Manager")
-                this_group.user_set.add(new_manager)
-                return Response({"message": "New manager added"}, 201)
-            else:   
-                return Response({"message": "Bad request"}, 400)
+            new_manager = get_object_or_404(User, username=request.data['username'])
+            this_group = Group.objects.get(name="Manager")
+            this_group.user_set.add(new_manager)
+            return Response({"message": "New manager added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -104,9 +103,12 @@ def RemoveManager(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_manager = get_object_or_404(User, pk=id)
-            this_manager = Group.objects.filter(name="Manager")
-            this_manager.delete()
-            return Response({"message": "Manager removed"}, 200)
+            this_group = Group.objects.filter(name="Manager")
+            if this_manager in this_group:
+                this_group.user_set.remove(this_manager)
+                return Response({"message": "Manager removed"}, 200)
+            else:
+                return Response({"message": "Unable to remove from group"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -125,13 +127,10 @@ def ViewDeliveryCrew(request):
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_crew = UserSerializer(data=request.data)
-            if new_crew.is_valid():
-                this_group = Group.objects.filter(name="Delivery Crew")
-                this_group.user_set.add(new_crew)
-                return Response({"message": "New delivery crew added"}, 201)
-            else:   
-                return Response({"message": "Bad request"}, 400)
+            new_crew = get_object_or_404(User, username=request.data['username'])
+            this_group = Group.objects.get(name="Delivery Crew")
+            this_group.user_set.add(new_crew)
+            return Response({"message": "New delivery crew added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -143,9 +142,12 @@ def RemoveDeliveryCrew(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_crew = get_object_or_404(User, pk=id)
-            this_crew = Group.objects.filter(name="Delivery Crew")
-            this_crew.delete()
-            return Response({"message": "Delivery crew removed"}, 200)
+            this_group = Group.objects.filter(name="Delivery Crew")
+            if this_crew in this_group:
+                this_group.user_set.remove(this_crew)
+                return Response({"message": "Delivery crew removed"}, 200)
+            else:
+                return Response({"message": "Unable to remove from group"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -163,7 +165,7 @@ def OrdersList(request):
         if new_order.is_valid():
             new_order.save()
             return Response({"message": "New order added"}, 201)
-        else:   
+        else:
             return Response({"message": "Bad request"}, 400)
     else:
         return Response({"message": "Unauthorized"}, 401)
@@ -175,10 +177,11 @@ def ThisOrder(request, id):
         this_order = get_object_or_404(Order, pk=id)
         this_order = OrderSerializer(this_order)
         return Response({"message": "Displaying this order"}, 200)
-    elif request.method == 'PATCH':
+    elif request.method == 'PATCH' or request.method == 'PUT':
         if request.user.groups.filter(name="Manager").exists() or request.user.groups.filter(name="Delivery Crew").exists():
             this_order = get_object_or_404(Order, pk=id)
             this_order = OrderSerializer(this_order)
+            this_order.save()
             return Response({"message": "Order status updated"}, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
@@ -204,9 +207,11 @@ def DisplayCart(request):
         if new_cart.is_valid():
             new_cart.save()
             return Response({"message": "New item added to cart"}, 201)
-        else:   
+        else:
             return Response({"message": "Bad request"}, 400)
     elif request.method == 'DELETE':
+        this_cart = Cart.objects.all()
+        this_cart.delete()
         return Response({"message": "Emptying cart"}, 200)
     else:
         return Response({"message": "Unauthorized"}, 401)
