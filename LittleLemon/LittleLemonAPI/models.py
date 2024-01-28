@@ -29,7 +29,8 @@ class Cart(models.Model):
         unique_together = ('menuitem', 'user')
 
     def get_total(self):
-        return self.quantity * self.unit_price
+        new_price = self.quantity * self.unit_price
+        return new_price
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -47,3 +48,7 @@ class OrderItem(models.Model):
 
     class Meta:
         unique_together = ('order', 'menuitem')
+
+    def get_total(self):
+        new_price = self.quantity * self.unit_price
+        return new_price

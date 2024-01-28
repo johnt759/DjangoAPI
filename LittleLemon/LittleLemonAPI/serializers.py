@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email_address']
+        fields = ['id']
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,6 +16,9 @@ class MenuItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuItem
         fields = ['title', 'price', 'featured', 'category']
+        extra_kwargs = {
+            "price": {"min_value": 0.99}
+        }
 
 class CartSerializer(serializers.ModelSerializer):
     class Meta:
