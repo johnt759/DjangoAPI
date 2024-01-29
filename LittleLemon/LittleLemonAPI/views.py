@@ -52,7 +52,7 @@ def ThisItem(request, id):
     elif request.method == 'PUT' or request.method == 'PATCH':
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
-            this_item = MenuItemSerializer(this_item, data=request.data)
+            this_item.featured = not this_item.featured
             this_item.save()
             return Response({"message": "Item updated"}, 200)
         else:
@@ -178,7 +178,7 @@ def ThisOrder(request, id):
     elif request.method == 'PATCH' or request.method == 'PUT':
         if request.user.groups.filter(name="Manager").exists() or request.user.groups.filter(name="Delivery Crew").exists():
             this_order = get_object_or_404(Order, pk=id)
-            this_order = OrderSerializer(this_order, data=request.data)
+            this_order.status = not this_order.status
             this_order.save()
             return Response({"message": "Order status updated"}, 200)
         else:
@@ -196,19 +196,28 @@ def ThisOrder(request, id):
 @api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def DisplayCart(request):
+    this_user = request.user.id
     if request.method == 'GET':
-        this_cart = Cart.objects.all()
+        this_cart = get_object_or_404(Cart, user=this_user)
         this_cart = CartSerializer(this_cart, many=True)
         return Response(this_cart.data, 200)
     elif request.method == 'POST':
-        new_cart = CartSerializer(data=request.data)
-        if new_cart.is_valid():
-            new_cart.save()
-            return Response({"message": "New item added to cart"}, 201)
-        else:
-            return Response({"message": "Bad request"}, 400)
+        item_name = request.data['menuitem']
+        num_ordered = int(request.data['quantity'])
+        this_item = get_object_or_404(MenuItem, title=item_name)
+        this_item2 = this_item
+        this_item = MenuItemSerializer2(this_item)
+        this_price = float(this_item.data['price'])
+        total_price = num_ordered*this_price
+        user_id = User.objects.get(id=this_user)
+        item_name = MenuItem.objects.get(title=request.data['menuitem'])
+        new_item = Cart(user=user_id, menuitem=item_name,
+                        quantity=num_ordered, unit_price=this_price,
+                        price=total_price)
+        new_item.save()
+        return Response({"message": "New item added to cart"}, 201)
     elif request.method == 'DELETE':
-        this_cart = Cart.objects.all()
+        this_cart = get_object_or_404(Cart, user=this_user)
         this_cart.delete()
         return Response({"message": "Emptying cart"}, 200)
     else:
