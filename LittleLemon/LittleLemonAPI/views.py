@@ -49,20 +49,12 @@ def ThisItem(request, id):
             return Response(this_item.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
-    elif request.method == 'PUT':
+    elif request.method == 'PUT' or request.method == 'PATCH':
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
-            this_item = MenuItemSerializer(this_item)
+            this_item = MenuItemSerializer(this_item, data=request.data)
             this_item.save()
-            return Response({"message": "Updating this item"}, 200)
-        else:
-            return Response({"message": "Forbidden"}, 403)
-    elif request.method == 'PATCH':
-        if request.user.groups.filter(name="Manager").exists():
-            this_item = get_object_or_404(MenuItem, pk=id)
-            this_item = MenuItemSerializer(this_item)
-            this_item.save()
-            return Response({"message": "Partially updating this item"}, 200)
+            return Response({"message": "Item updated"}, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'DELETE':
@@ -90,8 +82,11 @@ def ViewManagers(request):
         if request.user.groups.filter(name="Manager").exists():
             new_manager = get_object_or_404(User, username=request.data['username'])
             this_group = Group.objects.get(name="Manager")
-            this_group.user_set.add(new_manager)
-            return Response({"message": "New manager added"}, 201)
+            if new_manager not in this_group:
+                this_group.user_set.add(new_manager)
+                return Response({"message": "New manager added"}, 201)
+            else:
+                return Response({"message": "Manager already exists"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -108,7 +103,7 @@ def RemoveManager(request, id):
                 this_group.user_set.remove(this_manager)
                 return Response({"message": "Manager removed"}, 200)
             else:
-                return Response({"message": "Unable to remove from group"}, 400)
+                return Response({"message": "Unable to remove manager"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -129,8 +124,11 @@ def ViewDeliveryCrew(request):
         if request.user.groups.filter(name="Manager").exists():
             new_crew = get_object_or_404(User, username=request.data['username'])
             this_group = Group.objects.get(name="Delivery Crew")
-            this_group.user_set.add(new_crew)
-            return Response({"message": "New delivery crew added"}, 201)
+            if new_crew not in this_group:
+                this_group.user_set.add(new_crew)
+                return Response({"message": "New delivery crew added"}, 201)
+            else:
+                return Response({"message": "Delivery crew already exists"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -147,7 +145,7 @@ def RemoveDeliveryCrew(request, id):
                 this_group.user_set.remove(this_crew)
                 return Response({"message": "Delivery crew removed"}, 200)
             else:
-                return Response({"message": "Unable to remove from group"}, 400)
+                return Response({"message": "Unable to remove delivery crew"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -176,11 +174,11 @@ def ThisOrder(request, id):
     if request.method == 'GET':
         this_order = get_object_or_404(Order, pk=id)
         this_order = OrderSerializer(this_order)
-        return Response({"message": "Displaying this order"}, 200)
+        return Response(this_order.data, 200)
     elif request.method == 'PATCH' or request.method == 'PUT':
         if request.user.groups.filter(name="Manager").exists() or request.user.groups.filter(name="Delivery Crew").exists():
             this_order = get_object_or_404(Order, pk=id)
-            this_order = OrderSerializer(this_order)
+            this_order = OrderSerializer(this_order, data=request.data)
             this_order.save()
             return Response({"message": "Order status updated"}, 200)
         else:
@@ -215,16 +213,3 @@ def DisplayCart(request):
         return Response({"message": "Emptying cart"}, 200)
     else:
         return Response({"message": "Unauthorized"}, 401)
-
-# The following functions below shall indicate whether the user is autheticated to access,
-# and if the following actions can be done only by a manager or delivery crew.
-
-@permission_classes([IsAuthenticated])
-def view_as_manager(request):
-    if not request.user.groups.filter(name="Manager").exists() and request.user.IsAuthenticated():
-        return Response({"message": "You do not have permission to perform this action."}, 403)
-
-@permission_classes([IsAuthenticated])
-def view_as_delivery_crew(request):
-    if not request.user.groups.filter(name="Delivery crew").exists() and request.user.IsAuthenticated():
-        return Response({"message": "You do not have permission to perform this action."}, 403)
