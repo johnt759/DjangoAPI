@@ -31,8 +31,6 @@ class MenuItemSerializer2(serializers.ModelSerializer):
         }
 
 class CartSerializer(serializers.ModelSerializer):
-    price = serializers.SerializerMethodField(method_name="calculate_price")
-
     class Meta:
         model = Cart
         user = UserSerializer(read_only=True)
@@ -41,9 +39,6 @@ class CartSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'quantity': {"min_value": 1}
         }
-
-    def calculate_price(self, item:MenuItem, quantity):
-        return Decimal(item.price) * quantity
 
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
