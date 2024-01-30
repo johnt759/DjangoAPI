@@ -44,6 +44,3 @@ class OrderItem(models.Model):
 
     class Meta:
         unique_together = ('order', 'menuitem')
-
-    def get_total(self, num, price_per_item):
-        return num * price_per_item

@@ -8,6 +8,7 @@ from rest_framework.decorators import *
 from djoser import *
 from .models import *
 from .serializers import *
+from datetime import date
 
 # Create your views here.
 @api_view(['GET', 'POST'])
@@ -28,16 +29,18 @@ def ItemsList(request):
         return Response(item_list.data, 200)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_item = MenuItemSerializer(data=request.data)
-            if new_item.is_valid():
-                new_item.save()
-                return Response({"message": "Item added into menu list"}, 201)
-            else:
-                return Response({"message": "Bad request"}, 400)
+            new_name = request.data['title']
+            new_price = request.data['price']
+            new_featured = request.data['featured']
+            new_category = request.data['category']
+            category_id = Category.objects.get(title=new_category)
+            new_item = MenuItem(title=new_name, price=new_price, featured=new_featured, category=category_id)
+            new_item.save()
+            return Response({"message": "Item added into menu list"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
@@ -54,13 +57,14 @@ def ThisItem(request, id):
             this_item = get_object_or_404(MenuItem, pk=id)
             this_title = request.data['title']
             this_price = request.data['price']
-            is_featured = request.data['featured']
-            if this_title is not None:
+            this_category = request.data['category']
+            if this_item:
                 this_item.title = this_title
-            if this_price is not None:
+            if this_title:
                 this_item.price = this_price
-            if is_featured is not None:
-                this_item.featured = is_featured
+            if this_category:
+                category_id = Category.objects.get(title=this_category)
+                this_item.category = category_id
             this_item.save()
             return Response({"message": "Item updated"}, 200)
         else:
@@ -81,7 +85,7 @@ def ThisItem(request, id):
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -89,21 +93,21 @@ def ViewManagers(request):
     if request.method == 'GET':
         if request.user.groups.filter(name="Manager").exists():
             manager_list = User.objects.all()
-            manager_list = Group.objects.filter(name="Manager")
+            manager_list = Group.objects.all().filter(name__contains="Manager")
             manager_list = UserSerializer(manager_list, many=True)
             return Response(manager_list.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_manager = User.objects.get(username=request.data['username'])
-            this_group = Group.objects.get(name="Manager")
+            new_manager = get_object_or_404(User, id=request.data['id'])
+            this_group = Group.objects.all().filter(name__contains="Manager")
             this_group.user_set.add(new_manager)
             return Response({"message": "New manager added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -111,7 +115,7 @@ def RemoveManager(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_manager = get_object_or_404(User, pk=id)
-            this_group = Group.objects.filter(name="Manager")
+            this_group = Group.objects.filter(name__contains="Manager")
             if this_manager in this_group:
                 this_group.user_set.remove(this_manager)
                 return Response({"message": "Manager removed"}, 200)
@@ -120,7 +124,7 @@ def RemoveManager(request, id):
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -128,21 +132,22 @@ def ViewDeliveryCrew(request):
     if request.method == 'GET':
         if request.user.groups.filter(name="Manager").exists():
             crew_list = User.objects.all()
-            crew_list = Group.objects.filter(name="Delivery Crew")
+            crew_list = Group.objects.all().filter(name__contains="Delivery Crew")
             crew_list = UserSerializer(crew_list, many=True)
             return Response(crew_list.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_crew = User.objects.get(username=request.data['username'])
-            this_group = Group.objects.get(name="Delivery Crew")
-            this_group.user_set.add(new_crew)
+            new_crew = get_object_or_404(User, username=request.data['username'])
+            this_group = Group.objects.all().filter(name__contains="Delivery Crew")
+            new_crew.groups.add(this_group)
+            new_crew.save()
             return Response({"message": "New delivery crew added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -150,16 +155,16 @@ def RemoveDeliveryCrew(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_crew = get_object_or_404(User, pk=id)
-            this_group = Group.objects.filter(name="Delivery Crew")
+            this_group = Group.objects.filter(name__contains="Delivery Crew")
             if this_crew in this_group:
-                this_group.user_set.remove(this_crew)
+                this_crew.groups.remove(this_group)
                 return Response({"message": "Delivery crew removed"}, 200)
             else:
                 return Response({"message": "Unable to remove delivery crew"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -170,30 +175,50 @@ def OrdersList(request):
         return Response(order_list.data, 200)
     elif request.method == 'POST':
         order_total = 0
-        this_user = request.user.id
+        this_user = get_object_or_404(User, id=request.user.id)
         this_cart = get_list_or_404(Cart, user=this_user)
-        new_order = OrderItemSerializer(data=request.data)
-        if new_order.is_valid():
-            new_order.save()
-            return Response({"message": "New order added"}, 201)
-        else:
-            return Response({"message": "Bad request"}, 400)
+        for this_item in this_cart:
+            new_order_item = OrderItem(order=this_item.user, menuitem=this_item.menuitem,
+                                  quantity=this_item.quantity, unit_price = this_item.unit_price,
+                                  price=this_item.price)
+            new_order_item.save()
+        for this_item in this_cart:
+            order_total += float(this_item.price)
+        new_order = Order(order=this_user, total=order_total, date=date.today())
+        new_order.save()
+        for this_item in this_cart:
+            this_item.delete()
+        return Response({"message": "New order placed"}, 201)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
-@api_view(['GET', 'PATCH', 'DELETE'])
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def ThisOrder(request, id):
     if request.method == 'GET':
-        this_order = OrderItem.objects.all()
-        this_order = OrderItemSerializer(this_order, many=True)
-        return Response(this_order.data, 200)
+        if request.user.groups.filter(name="Manager").exists():
+            this_order = Order.objects.all()
+            this_order = OrderSerializer(this_order, many=True)
+            return Response(this_order.data, 200)
+        else:
+            this_user = get_object_or_404(User, id=request.user.id)
+            this_order = Order.objects.all().filter(user=this_user.id)
+            if not this_order:
+                return Response({"message": "User doesn't exist"}, 404)
+            this_order = OrderSerializer(this_order, many=True)
+            return Response(this_order.data, 200)
     elif request.method == 'PUT':
         if request.user.groups.filter(name="Manager").exists():
             this_order = get_object_or_404(Order, pk=id)
-            this_order.delivery_crew = request.data['delivery_crew']
-            this_order.save()
-            return Response({"message": "Order status updated"}, 200)
+            this_crew = get_object_or_404(User, username=request.data['delivery_crew'])
+            this_group = Group.objects.filter(name="Delivery Crew")
+            if this_crew in this_group:
+                this_order.delivery_crew = this_crew.id
+                this_order.save()
+                return Response({"message": "Order status updated"}, 200)
+            else:
+                return Response({"message": "Delivery crew doesn't exist"}, 404)
+            #this_crew = UserSerializer(this_crew)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'PATCH':
@@ -207,12 +232,17 @@ def ThisOrder(request, id):
     elif request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_order = get_object_or_404(Order, pk=id)
-            this_order.delete()
+            user_id = this_order.user
+            this_user = get_object_or_404(User, id=user_id)
+            order_items = get_list_or_404(OrderItem, order=this_user)
+            for this_item in order_items:
+                this_item.delete()
+            this_order.delete()    
             return Response({"message": "Order deleted"}, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
 
 @api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([IsAuthenticated])
@@ -220,6 +250,8 @@ def DisplayCart(request):
     this_user = request.user.id
     if request.method == 'GET':
         this_cart = Cart.objects.all().filter(user=this_user)
+        if not this_cart:
+            return Response({"message": "User doesn't exist"}, 404)
         this_cart = CartSerializer(this_cart, many=True)
         return Response(this_cart.data, 200)
     elif request.method == 'POST':
@@ -241,4 +273,4 @@ def DisplayCart(request):
         this_cart.delete()
         return Response({"message": "Emptying cart"}, 200)
     else:
-        return Response({"message": "Unauthorized"}, 401)
+        return Response({"message": "Unknown Method"}, 405)
