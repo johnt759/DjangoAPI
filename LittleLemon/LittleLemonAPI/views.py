@@ -3,7 +3,6 @@ from django.core.paginator import *
 from django.contrib.auth.models import User, Group
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from rest_framework.decorators import *
 from djoser import *
 from .models import *
@@ -92,18 +91,20 @@ def ThisItem(request, id):
 def ViewManagers(request):
     if request.method == 'GET':
         if request.user.groups.filter(name="Manager").exists():
-            manager_list = User.objects.all()
-            manager_list = Group.objects.all().filter(name__contains="Manager")
+            manager_list = User.objects.all().filter(groups__name="Manager")
             manager_list = UserSerializer(manager_list, many=True)
             return Response(manager_list.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_manager = get_object_or_404(User, id=request.data['id'])
-            this_group = Group.objects.all().filter(name__contains="Manager")
-            this_group.user_set.add(new_manager)
-            return Response({"message": "New manager added"}, 201)
+            new_manager = User.objects.get(username=request.data['username'])
+            this_group = Group.objects.get(name__contains="Manager")
+            if not new_manager.groups.filter(name="Manager").exists():
+                this_group.user_set.add(new_manager)
+                return Response({"message": "New manager added"}, 201)
+            else:
+                return Response({"message": "Manager already exists"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -115,12 +116,12 @@ def RemoveManager(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_manager = get_object_or_404(User, pk=id)
-            this_group = Group.objects.filter(name__contains="Manager")
-            if this_manager in this_group:
+            this_group = Group.objects.all().filter(name__contains="Manager")
+            if this_manager.groups.filter(name="Manager").exists():
                 this_group.user_set.remove(this_manager)
                 return Response({"message": "Manager removed"}, 200)
             else:
-                return Response({"message": "Unable to remove manager"}, 400)
+                return Response({"message": "Manager doesn't exist"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -131,19 +132,20 @@ def RemoveManager(request, id):
 def ViewDeliveryCrew(request):
     if request.method == 'GET':
         if request.user.groups.filter(name="Manager").exists():
-            crew_list = User.objects.all()
-            crew_list = Group.objects.all().filter(name__contains="Delivery Crew")
+            crew_list = User.objects.all().filter(groups__name="Delivery Crew")
             crew_list = UserSerializer(crew_list, many=True)
             return Response(crew_list.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_crew = get_object_or_404(User, username=request.data['username'])
-            this_group = Group.objects.all().filter(name__contains="Delivery Crew")
-            new_crew.groups.add(this_group)
-            new_crew.save()
-            return Response({"message": "New delivery crew added"}, 201)
+            new_crew = User.objects.get(username=request.data['username'])
+            this_group = Group.objects.get(name__contains="Delivery Crew")
+            if not new_crew.groups.filter(name="Delivery Crew").exists():
+                this_group.user_set.add(new_crew)
+                return Response({"message": "New delivery crew added"}, 201)
+            else:
+                return Response({"message": "Delivery crew already exists"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -155,12 +157,12 @@ def RemoveDeliveryCrew(request, id):
     if request.method == 'DELETE':
         if request.user.groups.filter(name="Manager").exists():
             this_crew = get_object_or_404(User, pk=id)
-            this_group = Group.objects.filter(name__contains="Delivery Crew")
-            if this_crew in this_group:
-                this_crew.groups.remove(this_group)
+            this_group = Group.objects.get(name__contains="Delivery Crew")
+            if this_crew.groups.filter(name="Delivery Crew").exists():
+                this_group.user_set.remove(this_crew)
                 return Response({"message": "Delivery crew removed"}, 200)
             else:
-                return Response({"message": "Unable to remove delivery crew"}, 400)
+                return Response({"message": "Delivery crew doesn't exist"}, 400)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -218,7 +220,6 @@ def ThisOrder(request, id):
                 return Response({"message": "Order status updated"}, 200)
             else:
                 return Response({"message": "Delivery crew doesn't exist"}, 404)
-            #this_crew = UserSerializer(this_crew)
         else:
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'PATCH':
