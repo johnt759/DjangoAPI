@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, get_list_or_404
 from django.core.paginator import *
 from django.contrib.auth.models import User, Group
 from rest_framework.response import Response
@@ -49,7 +49,23 @@ def ThisItem(request, id):
             return Response(this_item.data, 200)
         else:
             return Response({"message": "Forbidden"}, 403)
-    elif request.method == 'PUT' or request.method == 'PATCH':
+    elif request.method == 'PUT':
+        if request.user.groups.filter(name="Manager").exists():
+            this_item = get_object_or_404(MenuItem, pk=id)
+            this_title = request.data['title']
+            this_price = request.data['price']
+            is_featured = request.data['featured']
+            if this_title is not None:
+                this_item.title = this_title
+            if this_price is not None:
+                this_item.price = this_price
+            if is_featured is not None:
+                this_item.featured = is_featured
+            this_item.save()
+            return Response({"message": "Item updated"}, 200)
+        else:
+            return Response({"message": "Forbidden"}, 403)
+    elif request.method == 'PATCH':
         if request.user.groups.filter(name="Manager").exists():
             this_item = get_object_or_404(MenuItem, pk=id)
             this_item.featured = not this_item.featured
@@ -80,13 +96,10 @@ def ViewManagers(request):
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_manager = get_object_or_404(User, username=request.data['username'])
+            new_manager = User.objects.get(username=request.data['username'])
             this_group = Group.objects.get(name="Manager")
-            if new_manager not in this_group:
-                this_group.user_set.add(new_manager)
-                return Response({"message": "New manager added"}, 201)
-            else:
-                return Response({"message": "Manager already exists"}, 400)
+            this_group.user_set.add(new_manager)
+            return Response({"message": "New manager added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -122,13 +135,10 @@ def ViewDeliveryCrew(request):
             return Response({"message": "Forbidden"}, 403)
     elif request.method == 'POST':
         if request.user.groups.filter(name="Manager").exists():
-            new_crew = get_object_or_404(User, username=request.data['username'])
+            new_crew = User.objects.get(username=request.data['username'])
             this_group = Group.objects.get(name="Delivery Crew")
-            if new_crew not in this_group:
-                this_group.user_set.add(new_crew)
-                return Response({"message": "New delivery crew added"}, 201)
-            else:
-                return Response({"message": "Delivery crew already exists"}, 400)
+            this_group.user_set.add(new_crew)
+            return Response({"message": "New delivery crew added"}, 201)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -155,11 +165,14 @@ def RemoveDeliveryCrew(request, id):
 @permission_classes([IsAuthenticated])
 def OrdersList(request):
     if request.method == 'GET':
-        order_list = Order.objects.all()
-        order_list = OrderSerializer(order_list, many=True)
+        order_list = OrderItem.objects.all()
+        order_list = OrderItemSerializer(order_list, many=True)
         return Response(order_list.data, 200)
     elif request.method == 'POST':
-        new_order = OrderSerializer(data=request.data)
+        order_total = 0
+        this_user = request.user.id
+        this_cart = get_list_or_404(Cart, user=this_user)
+        new_order = OrderItemSerializer(data=request.data)
         if new_order.is_valid():
             new_order.save()
             return Response({"message": "New order added"}, 201)
@@ -172,10 +185,18 @@ def OrdersList(request):
 @permission_classes([IsAuthenticated])
 def ThisOrder(request, id):
     if request.method == 'GET':
-        this_order = get_object_or_404(Order, pk=id)
-        this_order = OrderSerializer(this_order)
+        this_order = OrderItem.objects.all()
+        this_order = OrderItemSerializer(this_order, many=True)
         return Response(this_order.data, 200)
-    elif request.method == 'PATCH' or request.method == 'PUT':
+    elif request.method == 'PUT':
+        if request.user.groups.filter(name="Manager").exists():
+            this_order = get_object_or_404(Order, pk=id)
+            this_order.delivery_crew = request.data['delivery_crew']
+            this_order.save()
+            return Response({"message": "Order status updated"}, 200)
+        else:
+            return Response({"message": "Forbidden"}, 403)
+    elif request.method == 'PATCH':
         if request.user.groups.filter(name="Manager").exists() or request.user.groups.filter(name="Delivery Crew").exists():
             this_order = get_object_or_404(Order, pk=id)
             this_order.status = not this_order.status
@@ -198,14 +219,13 @@ def ThisOrder(request, id):
 def DisplayCart(request):
     this_user = request.user.id
     if request.method == 'GET':
-        this_cart = get_object_or_404(Cart, user=this_user)
+        this_cart = Cart.objects.all().filter(user=this_user)
         this_cart = CartSerializer(this_cart, many=True)
         return Response(this_cart.data, 200)
     elif request.method == 'POST':
         item_name = request.data['menuitem']
         num_ordered = int(request.data['quantity'])
         this_item = get_object_or_404(MenuItem, title=item_name)
-        this_item2 = this_item
         this_item = MenuItemSerializer2(this_item)
         this_price = float(this_item.data['price'])
         total_price = num_ordered*this_price
@@ -217,7 +237,7 @@ def DisplayCart(request):
         new_item.save()
         return Response({"message": "New item added to cart"}, 201)
     elif request.method == 'DELETE':
-        this_cart = get_object_or_404(Cart, user=this_user)
+        this_cart = Cart.objects.all().filter(user=this_user)
         this_cart.delete()
         return Response({"message": "Emptying cart"}, 200)
     else:
