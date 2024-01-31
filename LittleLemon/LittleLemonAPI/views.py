@@ -213,9 +213,8 @@ def ThisOrder(request, id):
         if request.user.groups.filter(name="Manager").exists():
             this_order = get_object_or_404(Order, pk=id)
             this_crew = get_object_or_404(User, username=request.data['delivery_crew'])
-            this_group = Group.objects.filter(name="Delivery Crew")
-            if this_crew in this_group:
-                this_order.delivery_crew = this_crew.id
+            if this_crew.groups.filter(name="Delivery Crew").exists():
+                this_order.delivery_crew = this_crew
                 this_order.save()
                 return Response({"message": "Order status updated"}, 200)
             else:
