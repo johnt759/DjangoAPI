@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404, get_list_or_404
-from django.core.paginator import *
 from django.contrib.auth.models import User, Group
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -251,7 +250,7 @@ def DisplayCart(request):
     if request.method == 'GET':
         this_cart = Cart.objects.all().filter(user=this_user)
         if not this_cart:
-            return Response({"message": "User doesn't exist"}, 404)
+            return Response({"message": "Cart is empty"}, 404)
         this_cart = CartSerializer(this_cart, many=True)
         return Response(this_cart.data, 200)
     elif request.method == 'POST':

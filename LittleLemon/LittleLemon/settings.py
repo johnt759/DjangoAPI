@@ -144,5 +144,5 @@ REST_FRAMEWORK = {
         'user': '5/minute',
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 5
+    'PAGE_SIZE': 3
 }

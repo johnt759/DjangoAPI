@@ -1,9 +1,8 @@
-(Make sure to use the default values for each user listed below. Feel free to try out different usernames and passwords if needed.)
-
-Superuser
+Superuser (DO NOT DELETE)
 Username: admin
 Password: L!tt13L3m0n@d3
 Email: admin@littlelemon.com
+Token: 8ea9f47e86d8c423c087f5d85940c8c7df8679f2
 
 Manager
 Username: Robert
@@ -12,6 +11,7 @@ Token: fa547c856d4ed0d4a4211625d8ff30f725edb8c4
 
 Username: Kayla
 Password: Or@ng3Ju!c3
+Token: 12a0ceace3bd232f3cbfcdba8c884346918623ad
 
 Delivery crew
 Username: Mary
@@ -19,9 +19,16 @@ Password: Expr3$$0T00
 Token: e76731fd16546c0c4e2c7d0b832d4b131961feb9
 
 Username: Larry
-Password: E@r1yT0n
+Password: D!3$31T0n
+Token: a991dd47c938c25a7ec6d29ed25c765fe4edef7a
 
 Customer
 Username: Benjamin
 Password: L!tt13L!m3
 Token: 85cc0fb1ce27199accfa14c03a6e2df624441874
+
+Username: Jane
+Password: V3g@nP1@t3
+Token: 801028f837563b7bbdfbc45863eb4b91212abd48
+
+(Feel free to use Django admin to create new users and generate tokens for them if needed.)
