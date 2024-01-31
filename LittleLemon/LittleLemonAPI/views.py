@@ -120,7 +120,7 @@ def RemoveManager(request, id):
                 this_group.user_set.remove(this_manager)
                 return Response({"message": "Manager removed"}, 200)
             else:
-                return Response({"message": "Manager doesn't exist"}, 400)
+                return Response({"message": "Manager doesn't exist"}, 404)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
@@ -161,7 +161,7 @@ def RemoveDeliveryCrew(request, id):
                 this_group.user_set.remove(this_crew)
                 return Response({"message": "Delivery crew removed"}, 200)
             else:
-                return Response({"message": "Delivery crew doesn't exist"}, 400)
+                return Response({"message": "Delivery crew doesn't exist"}, 404)
         else:
             return Response({"message": "Forbidden"}, 403)
     else:
